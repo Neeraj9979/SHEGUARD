@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <h1>Welcome, {{ name }}!</h1>
+
+    <p>Your personal safety dashboard</p>
+
+    <!-- Statistics -->
+
+    <div class="cards">
+
+        <div class="card">
+
+            <h3>Total SOS Alerts</h3>
+
+            <h2>{{ alert_count }}</h2>
+
+        </div>
+
+        <div class="card">
+
+            <h3>Emergency Contacts</h3>
+
+            <h2>{{ contact_count }}</h2>
+
+        </div>
+
+    </div>
+
+
+    <!-- SOS -->
+
+    <div class="card sos-section">
+
+        <h2>Emergency Assistance</h2>
+
+        <p>
+            Press the button if you need emergency assistance.
+        </p>
+
+        <button class="sos-button"
+                onclick="sendSOS()">
+
+            SOS
+
+        </button>
+
+        <p id="sos-message"></p>
+
+    </div>
+
+
+    <!-- SMS SETTINGS -->
+
+    <div class="card">
+
+        <h2>SMS Notifications</h2>
+
+        <p>
+            Send emergency SMS to your trusted contacts.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('sms_settings') }}">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <select name="sms_enabled">
+
+                <option value="yes"
+                    {% if sms_enabled %}selected{% endif %}>
+                    Enable SMS
+                </option>
+
+                <option value="no"
+                    {% if not sms_enabled %}selected{% endif %}>
+                    Disable SMS
+                </option>
+
+            </select>
+
+            <button type="submit">
+                Save SMS Settings
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- LIVE LOCATION -->
+
+    <div class="card">
+
+        <h2>Live Location Tracking</h2>
+
+        <p>
+            Share your location while the tracking session is enabled.
+        </p>
+
+        <p>
+            Current Status:
+
+            <strong id="tracking-status">
+                {% if tracking_enabled %}
+                    Tracking enabled
+                {% else %}
+                    Tracking disabled
+                {% endif %}
+            </strong>
+
+        </p>
+
+        <button id="tracking-button"
+                onclick="toggleTracking()">
+
+            {% if tracking_enabled %}
+                Stop Tracking
+            {% else %}
+                Start Live Tracking
+            {% endif %}
+
+        </button>
+
+        <p id="location-message"></p>
+
+        {% if latest_location %}
+
+            <p>
+                Last saved location:
+                {{ latest_location[0] }},
+                {{ latest_location[1] }}
+            </p>
+
+            <a target="_blank"
+               href="https://www.openstreetmap.org/?mlat={{ latest_location[0] }}&mlon={{ latest_location[1] }}">
+
+                View last saved location
+
+            </a>
+
+            <p>
+                Last update: {{ latest_location[2] }}
+            </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- AI RISK ASSESSMENT -->
+
+    <div class="card">
+
+        <h2>AI Safety Risk Analysis</h2>
+
+        <form method="POST"
+              action="{{ url_for('risk') }}">
+
+            <input type="hidden"
+                   name="csrf_token"
+                   value="{{ csrf_token() }}">
+
+            <label>Are you being followed?</label>
+
+            <select name="followed">
+
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+
+            </select>
+
+
+            <label>Are you in an isolated location?</label>
+
+            <select name="isolated">
+
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+
+            </select>
+
+
+            <label>Has anyone threatened you?</label>
+
+            <select name="threat">
+
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+
+            </select>
+
+
+            <label>Do you feel unsafe?</label>
+
+            <select name="unsafe">
+
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+
+            </select>
+
+            <button type="submit">
+                Predict Risk
+            </button>
+
+        </form>
+
+
+        {% if latest_risk %}
+
+            <div class="risk-result">
+
+                <h3>Latest Risk Prediction</h3>
+
+                <p>
+                    Risk Level: {{ latest_risk[0] }}
+                </p>
+
+                <p>
+                    Risk Score: {{ latest_risk[1] }}
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

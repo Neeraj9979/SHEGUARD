@@ -1,0 +1,9 @@
+Flask
+Flask-WTF
+Flask-Limiter
+psycopg2-binary
+python-dotenv
+scikit-learn
+numpy
+joblib
+twilio

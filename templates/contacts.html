@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Emergency Contacts</h1>
+
+    <form method="POST">
+
+        <input type="hidden"
+               name="csrf_token"
+               value="{{ csrf_token() }}">
+
+        <input type="text"
+               name="contact_name"
+               placeholder="Contact Name"
+               required>
+
+        <input type="tel"
+               name="phone"
+               placeholder="+91XXXXXXXXXX"
+               required>
+
+        <button type="submit">
+            Add Contact
+        </button>
+
+    </form>
+
+    <h2>Saved Contacts</h2>
+
+    {% for contact in contacts %}
+
+        <div class="contact">
+
+            <div>
+                <h3>{{ contact[1] }}</h3>
+                <p>{{ contact[2] }}</p>
+            </div>
+
+            <form method="POST"
+                  action="{{ url_for(
+                    'delete_contact',
+                    contact_id=contact[0]
+                  ) }}">
+
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <button class="delete-button">
+                    Delete
+                </button>
+
+            </form>
+
+        </div>
+
+    {% else %}
+
+        <p>No emergency contacts added.</p>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}
