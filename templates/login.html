@@ -2,40 +2,59 @@
 
 {% block content %}
 
-<div class="container">
+<div class="glass-container">
 
-    <h1>Welcome to SHEGUARD AI</h1>
-
-    <p>Your Intelligent Safety Companion</p>
+    <div class="auth-header">
+        <div class="auth-header-icon">&#128737;</div>
+        <h1 class="auth-title">Welcome Back</h1>
+        <p class="auth-subtitle">Sign in to access your SheGuard safety dashboard</p>
+    </div>
 
     <form method="POST">
-
         <input type="hidden"
                name="csrf_token"
                value="{{ csrf_token() }}">
 
-        <input type="email"
-               name="email"
-               placeholder="Email Address"
-               required>
+        <div class="form-group">
+            <label class="glass-label">Email Address</label>
+            <div class="glass-input-wrapper">
+                <span class="glass-input-icon">&#9993;</span>
+                <input type="email"
+                       name="email"
+                       class="glass-input"
+                       placeholder="name@example.com"
+                       required
+                       autocomplete="email">
+            </div>
+        </div>
 
-        <input type="password"
-               name="password"
-               placeholder="Password"
-               required>
+        <div class="form-group">
+            <label class="glass-label">Password</label>
+            <div class="glass-input-wrapper">
+                <span class="glass-input-icon">&#128274;</span>
+                <input type="password"
+                       name="password"
+                       class="glass-input"
+                       placeholder="Enter your password"
+                       required
+                       autocomplete="current-password">
+            </div>
+        </div>
 
-        <button type="submit">
-            Login
+        <button type="submit" class="glass-btn" style="margin-top: 12px;">
+            Sign In &rarr;
         </button>
 
     </form>
 
-    <p>
-        New user?
-        <a href="{{ url_for('register') }}">
-            Register
-        </a>
-    </p>
+    <div style="text-align: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--glass-border);">
+        <p style="color: var(--text-secondary); font-size: 14px;">
+            New to SheGuard?
+            <a href="{{ url_for('register') }}" class="glass-link">
+                Create an account
+            </a>
+        </p>
+    </div>
 
 </div>
 

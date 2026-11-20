@@ -2,233 +2,259 @@
 
 {% block content %}
 
-<div class="dashboard">
+<!-- Hero Header -->
+<div class="dashboard-hero">
+    <div class="hero-welcome">
+        <h1>Welcome, {{ name }}!</h1>
+        <p>Your Intelligent Personal Safety &amp; Emergency Guardian</p>
+    </div>
+    <div class="hero-chip">
+        <span class="beacon-dot"></span> Guardian Network Active
+    </div>
+</div>
 
-    <h1>Welcome, {{ name }}!</h1>
-
-    <p>Your personal safety dashboard</p>
-
-    <!-- Statistics -->
-
-    <div class="cards">
-
-        <div class="card">
-
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="glass-stat-card">
+        <div class="stat-info">
             <h3>Total SOS Alerts</h3>
-
-            <h2>{{ alert_count }}</h2>
-
+            <div class="stat-value" id="stat-alert-count">{{ alert_count }}</div>
         </div>
+        <div class="stat-icon-wrapper red">&#128680;</div>
+    </div>
 
-        <div class="card">
-
+    <div class="glass-stat-card">
+        <div class="stat-info">
             <h3>Emergency Contacts</h3>
-
-            <h2>{{ contact_count }}</h2>
-
+            <div class="stat-value">{{ contact_count }}</div>
         </div>
-
+        <div class="stat-icon-wrapper purple">&#128101;</div>
     </div>
 
-
-    <!-- SOS -->
-
-    <div class="card sos-section">
-
-        <h2>Emergency Assistance</h2>
-
-        <p>
-            Press the button if you need emergency assistance.
-        </p>
-
-        <button class="sos-button"
-                onclick="sendSOS()">
-
-            SOS
-
-        </button>
-
-        <p id="sos-message"></p>
-
-    </div>
-
-
-    <!-- SMS SETTINGS -->
-
-    <div class="card">
-
-        <h2>SMS Notifications</h2>
-
-        <p>
-            Send emergency SMS to your trusted contacts.
-        </p>
-
-        <form method="POST"
-              action="{{ url_for('sms_settings') }}">
-
-            <input type="hidden"
-                   name="csrf_token"
-                   value="{{ csrf_token() }}">
-
-            <select name="sms_enabled">
-
-                <option value="yes"
-                    {% if sms_enabled %}selected{% endif %}>
-                    Enable SMS
-                </option>
-
-                <option value="no"
-                    {% if not sms_enabled %}selected{% endif %}>
-                    Disable SMS
-                </option>
-
-            </select>
-
-            <button type="submit">
-                Save SMS Settings
-            </button>
-
-        </form>
-
-    </div>
-
-
-    <!-- LIVE LOCATION -->
-
-    <div class="card">
-
-        <h2>Live Location Tracking</h2>
-
-        <p>
-            Share your location while the tracking session is enabled.
-        </p>
-
-        <p>
-            Current Status:
-
-            <strong id="tracking-status">
-                {% if tracking_enabled %}
-                    Tracking enabled
+    <div class="glass-stat-card">
+        <div class="stat-info">
+            <h3>Latest AI Risk</h3>
+            <div class="stat-value" style="font-size: 24px;">
+                {% if latest_risk %}
+                    {{ latest_risk[0] }}
                 {% else %}
-                    Tracking disabled
+                    NORMAL
                 {% endif %}
-            </strong>
-
-        </p>
-
-        <button id="tracking-button"
-                onclick="toggleTracking()">
-
-            {% if tracking_enabled %}
-                Stop Tracking
-            {% else %}
-                Start Live Tracking
-            {% endif %}
-
-        </button>
-
-        <p id="location-message"></p>
-
-        {% if latest_location %}
-
-            <p>
-                Last saved location:
-                {{ latest_location[0] }},
-                {{ latest_location[1] }}
-            </p>
-
-            <a target="_blank"
-               href="https://www.openstreetmap.org/?mlat={{ latest_location[0] }}&mlon={{ latest_location[1] }}">
-
-                View last saved location
-
-            </a>
-
-            <p>
-                Last update: {{ latest_location[2] }}
-            </p>
-
-        {% endif %}
-
+            </div>
+        </div>
+        <div class="stat-icon-wrapper pink">&#128737;</div>
     </div>
+</div>
 
+<!-- Dashboard Grid (2 Columns) -->
+<div class="dashboard-grid">
 
-    <!-- AI RISK ASSESSMENT -->
+    <!-- Left Column: SOS & AI Risk -->
+    <div class="dashboard-col">
+        
+        <!-- Emergency SOS Card -->
+        <div class="glass-card sos-card-wrapper">
+            <div class="glass-card-header" style="justify-content: center; margin-bottom: 8px;">
+                <h2 class="glass-card-title" style="color: #f87171;">
+                    <span>&#128680;</span> Immediate Emergency SOS
+                </h2>
+            </div>
+            <p class="glass-card-subtitle" style="text-align: center; margin-bottom: 16px;">
+                Press the button below if you are in danger. Your live GPS coordinates will be captured and broadcast to your emergency contacts.
+            </p>
 
-    <div class="card">
-
-        <h2>AI Safety Risk Analysis</h2>
-
-        <form method="POST"
-              action="{{ url_for('risk') }}">
-
-            <input type="hidden"
-                   name="csrf_token"
-                   value="{{ csrf_token() }}">
-
-            <label>Are you being followed?</label>
-
-            <select name="followed">
-
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-
-            </select>
-
-
-            <label>Are you in an isolated location?</label>
-
-            <select name="isolated">
-
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-
-            </select>
-
-
-            <label>Has anyone threatened you?</label>
-
-            <select name="threat">
-
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-
-            </select>
-
-
-            <label>Do you feel unsafe?</label>
-
-            <select name="unsafe">
-
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-
-            </select>
-
-            <button type="submit">
-                Predict Risk
-            </button>
-
-        </form>
-
-
-        {% if latest_risk %}
-
-            <div class="risk-result">
-
-                <h3>Latest Risk Prediction</h3>
-
-                <p>
-                    Risk Level: {{ latest_risk[0] }}
-                </p>
-
-                <p>
-                    Risk Score: {{ latest_risk[1] }}
-                </p>
-
+            <div class="sos-pulse-container">
+                <button class="sos-button" onclick="sendSOS()" aria-label="Trigger Emergency SOS">
+                    <span class="sos-btn-text">SOS</span>
+                    <span class="sos-btn-subtext">Tap for Help</span>
+                </button>
             </div>
 
-        {% endif %}
+            <div id="sos-message" style="display: none; margin-top: 18px;"></div>
+        </div>
+
+        <!-- AI Risk Assessment Card -->
+        <div class="glass-card">
+            <div class="glass-card-header">
+                <h2 class="glass-card-title">
+                    <span>&#129302;</span> AI Safety Risk Analysis
+                </h2>
+                <span class="badge-active" style="background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.4); color: #c4b5fd;">
+                    ML Predictive Model
+                </span>
+            </div>
+            <p class="glass-card-subtitle">
+                Evaluate your immediate environmental conditions to calculate risk probability with our trained Random Forest classifier.
+            </p>
+
+            <form id="risk-prediction-form" method="POST" action="{{ url_for('risk') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label class="glass-label">1. Are you being followed or watched?</label>
+                    <select name="followed" class="glass-select">
+                        <option value="no">No - Surrounding area is normal</option>
+                        <option value="yes">Yes - Noticeable suspicious follower</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="glass-label">2. Are you in a dark or isolated location?</label>
+                    <select name="isolated" class="glass-select">
+                        <option value="no">No - Well-lit, populated public street</option>
+                        <option value="yes">Yes - Deserted alley, dark transit, or alone</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="glass-label">3. Has anyone threatened or confronted you?</label>
+                    <select name="threat" class="glass-select">
+                        <option value="no">No - No direct hostility</option>
+                        <option value="yes">Yes - Verbal/physical confrontation or threats</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="glass-label">4. Do you feel in immediate danger or uneasy?</label>
+                    <select name="unsafe" class="glass-select">
+                        <option value="no">No - Calm and confident</option>
+                        <option value="yes">Yes - Instinct indicates high threat</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="glass-btn" style="margin-top: 10px;">
+                    Predict Risk with AI &rarr;
+                </button>
+            </form>
+
+            <div id="risk-result-container" style="{% if not latest_risk %}display: none;{% endif %}">
+                {% if latest_risk %}
+                    <div class="risk-result-card {% if latest_risk[0] == 'HIGH' %}risk-high{% elif latest_risk[0] == 'MEDIUM' %}risk-medium{% else %}risk-low{% endif %}">
+                        <div class="risk-header">
+                            <span class="risk-icon">
+                                {% if latest_risk[0] == 'HIGH' %}&#128680;{% elif latest_risk[0] == 'MEDIUM' %}&#9888;&#65039;{% else %}&#128737;{% endif %}
+                            </span>
+                            <div>
+                                <h4 class="risk-title">{{ latest_risk[0] }} RISK LEVEL</h4>
+                                <p class="risk-score">Safety Threat Score: <strong>{{ latest_risk[1] }} / 100</strong></p>
+                            </div>
+                        </div>
+                        <div class="risk-meter-bar">
+                            <div class="risk-meter-fill" style="width: {{ latest_risk[1] }}%;"></div>
+                        </div>
+                        <p class="risk-advice">
+                            {% if latest_risk[0] == 'HIGH' %}
+                                DANGER DETECTED: Head towards a populated public venue immediately, alert your emergency contacts, or trigger the SOS button.
+                            {% elif latest_risk[0] == 'MEDIUM' %}
+                                HEIGHTENED RISK: Maintain situational awareness, avoid secluded shortcuts, and keep live tracking enabled.
+                            {% else %}
+                                LOW RISK: Current surroundings indicate normal risk level. Stay alert and keep your safety device accessible.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Right Column: Live Tracking & SMS Settings -->
+    <div class="dashboard-col">
+        
+        <!-- Live Location Tracking Card -->
+        <div class="glass-card">
+            <div class="glass-card-header">
+                <h2 class="glass-card-title">
+                    <span>&#128205;</span> Live GPS Tracking
+                </h2>
+                <div id="tracking-status">
+                    {% if tracking_enabled %}
+                        <span class="badge-active"><span class="beacon-dot"></span> Active</span>
+                    {% else %}
+                        <span class="badge-inactive">Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="glass-card-subtitle">
+                Continuously stream your background location coordinates securely for emergency beaconing and rapid responder dispatch.
+            </p>
+
+            <button id="tracking-button" class="glass-btn {% if tracking_enabled %}btn-active-tracking{% else %}glass-btn-secondary{% endif %}" onclick="toggleTracking()">
+                {% if tracking_enabled %}
+                    <span>&#9632; Stop Tracking</span>
+                {% else %}
+                    <span>&#9658; Start Live Tracking</span>
+                {% endif %}
+            </button>
+
+            <div id="location-message" style="display: none;"></div>
+
+            <div id="last-location-display">
+                {% if latest_location %}
+                    <div class="location-badge">
+                        <span>Last recorded: {{ "%.4f"|format(latest_location[0]) }}, {{ "%.4f"|format(latest_location[1]) }}</span>
+                        <a target="_blank" href="https://www.openstreetmap.org/?mlat={{ latest_location[0] }}&amp;mlon={{ latest_location[1] }}" class="glass-link">
+                            View Live Map &rarr;
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- SMS Emergency Dispatch Settings -->
+        <div class="glass-card">
+            <div class="glass-card-header">
+                <h2 class="glass-card-title">
+                    <span>&#128172;</span> SMS Notifications
+                </h2>
+                <div>
+                    {% if sms_enabled %}
+                        <span class="badge-active">&#10004; Enabled</span>
+                    {% else %}
+                        <span class="badge-inactive">&#10008; Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="glass-card-subtitle">
+                Configure whether SheGuard automatically sends high-priority SMS alerts containing your GPS map link to your saved emergency contacts.
+            </p>
+
+            <form method="POST" action="{{ url_for('sms_settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label class="glass-label">Automatic SMS Dispatch</label>
+                    <select name="sms_enabled" class="glass-select">
+                        <option value="yes" {% if sms_enabled %}selected{% endif %}>
+                            Enabled - Transmit instant SMS alerts on SOS
+                        </option>
+                        <option value="no" {% if not sms_enabled %}selected{% endif %}>
+                            Disabled - Do not dispatch automated SMS
+                        </option>
+                    </select>
+                </div>
+
+                <button type="submit" class="glass-btn glass-btn-secondary" style="margin-top: 6px;">
+                    Update SMS Preferences
+                </button>
+            </form>
+        </div>
+
+        <!-- Emergency Quick Contacts Overview -->
+        <div class="glass-card">
+            <div class="glass-card-header">
+                <h2 class="glass-card-title">
+                    <span>&#128101;</span> Quick Contacts
+                </h2>
+                <a href="{{ url_for('contacts') }}" class="glass-link">Manage All &rarr;</a>
+            </div>
+            <p class="glass-card-subtitle">
+                You have <strong>{{ contact_count }}</strong> emergency contact{% if contact_count != 1 %}s{% endif %} linked to your profile.
+            </p>
+            <a href="{{ url_for('contacts') }}" class="glass-btn glass-btn-secondary">
+                <span>+ Add / View Contacts</span>
+            </a>
+        </div>
 
     </div>
 

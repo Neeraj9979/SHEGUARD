@@ -37,21 +37,17 @@ csrf = CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["300 per day", "100 per hour"],
     storage_uri="memory://"
 )
 
 
 def login_required(func):
-
     @wraps(func)
     def wrapper(*args, **kwargs):
-
         if "user_id" not in session:
             return redirect(url_for("login"))
-
         return func(*args, **kwargs)
-
     return wrapper
 
 
@@ -61,10 +57,8 @@ def current_user_id():
 
 @app.route("/")
 def home():
-
     if "user_id" in session:
         return redirect(url_for("dashboard"))
-
     return redirect(url_for("login"))
 
 
@@ -72,13 +66,11 @@ def home():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-
     if request.method == "POST":
-
-        name = request.form["name"].strip()
-        email = request.form["email"].strip().lower()
-        phone = request.form["phone"].strip()
-        password = request.form["password"]
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
 
         if len(password) < 8:
             flash("Password must contain at least 8 characters.")
@@ -89,14 +81,12 @@ def register():
             return redirect(url_for("register"))
 
         hashed = generate_password_hash(password)
-
         sms_enabled = request.form.get("sms_enabled") == "yes"
 
         con = get_db()
         cur = con.cursor()
 
         try:
-
             cur.execute("""
                 INSERT INTO users
                 (name, email, password, phone, sms_enabled)
@@ -104,21 +94,13 @@ def register():
             """, (
                 name, email, hashed, phone, sms_enabled
             ))
-
             con.commit()
-
-            flash("Registration successful!")
-
+            flash("Registration successful! Please login to continue.")
             return redirect(url_for("login"))
-
         except Exception:
-
             con.rollback()
-
-            flash("Registration failed. Check whether email already exists.")
-
+            flash("Registration failed. Email might already be in use.")
         finally:
-
             cur.close()
             con.close()
 
@@ -128,13 +110,11 @@ def register():
 # ---------------- LOGIN ----------------
 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("10 per minute")
+@limiter.limit("20 per minute")
 def login():
-
     if request.method == "POST":
-
-        email = request.form["email"].strip().lower()
-        password = request.form["password"]
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
         con = get_db()
         cur = con.cursor()
@@ -146,17 +126,13 @@ def login():
         """, (email,))
 
         user = cur.fetchone()
-
         cur.close()
         con.close()
 
         if user and check_password_hash(user[2], password):
-
             session.clear()
-
             session["user_id"] = user[0]
             session["name"] = user[1]
-
             return redirect(url_for("dashboard"))
 
         flash("Invalid email or password.")
@@ -169,7 +145,6 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-
     con = get_db()
     cur = con.cursor()
 
@@ -179,32 +154,31 @@ def dashboard():
         SELECT COUNT(*) FROM sos_alerts
         WHERE user_id = %s
     """, (user_id,))
-
     alert_count = cur.fetchone()[0]
 
     cur.execute("""
         SELECT COUNT(*) FROM emergency_contacts
         WHERE user_id = %s
     """, (user_id,))
-
     contact_count = cur.fetchone()[0]
 
     cur.execute("""
-        SELECT risk_level, risk_score
+        SELECT risk_level, risk_score, analysis_time
         FROM risk_analysis
         WHERE user_id = %s
         ORDER BY analysis_time DESC
         LIMIT 1
     """, (user_id,))
-
     latest_risk = cur.fetchone()
 
     cur.execute("""
         SELECT sms_enabled, tracking_enabled
         FROM users WHERE user_id = %s
     """, (user_id,))
-
     settings = cur.fetchone()
+
+    sms_enabled = bool(settings[0]) if settings else False
+    tracking_enabled = bool(settings[1]) if settings else False
 
     cur.execute("""
         SELECT latitude, longitude, recorded_at
@@ -213,7 +187,6 @@ def dashboard():
         ORDER BY recorded_at DESC
         LIMIT 1
     """, (user_id,))
-
     latest_location = cur.fetchone()
 
     cur.close()
@@ -221,12 +194,12 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
-        name=session["name"],
+        name=session.get("name", "Guardian User"),
         alert_count=alert_count,
         contact_count=contact_count,
         latest_risk=latest_risk,
-        sms_enabled=settings[0],
-        tracking_enabled=settings[1],
+        sms_enabled=sms_enabled,
+        tracking_enabled=tracking_enabled,
         latest_location=latest_location
     )
 
@@ -236,19 +209,16 @@ def dashboard():
 @app.route("/contacts", methods=["GET", "POST"])
 @login_required
 def contacts():
-
     con = get_db()
     cur = con.cursor()
 
     if request.method == "POST":
-
-        name = request.form["contact_name"].strip()
-        phone = request.form["phone"].strip()
+        name = request.form.get("contact_name", "").strip()
+        phone = request.form.get("phone", "").strip()
 
         if not name or not phone:
-            flash("Enter contact name and phone number.")
+            flash("Please enter both contact name and phone number.")
         else:
-
             cur.execute("""
                 INSERT INTO emergency_contacts
                 (user_id, contact_name, phone)
@@ -256,10 +226,8 @@ def contacts():
             """, (
                 current_user_id(), name, phone
             ))
-
             con.commit()
-
-            flash("Contact added successfully.")
+            flash(f"Emergency contact '{name}' added successfully.")
 
     cur.execute("""
         SELECT contact_id, contact_name, phone
@@ -267,7 +235,6 @@ def contacts():
         WHERE user_id = %s
         ORDER BY contact_id DESC
     """, (current_user_id(),))
-
     all_contacts = cur.fetchall()
 
     cur.close()
@@ -282,7 +249,6 @@ def contacts():
 @app.route("/delete_contact/<int:contact_id>", methods=["POST"])
 @login_required
 def delete_contact(contact_id):
-
     con = get_db()
     cur = con.cursor()
 
@@ -292,12 +258,10 @@ def delete_contact(contact_id):
     """, (contact_id, current_user_id()))
 
     con.commit()
-
     cur.close()
     con.close()
 
-    flash("Contact deleted.")
-
+    flash("Emergency contact removed.")
     return redirect(url_for("contacts"))
 
 
@@ -306,7 +270,6 @@ def delete_contact(contact_id):
 @app.route("/sms-settings", methods=["POST"])
 @login_required
 def sms_settings():
-
     enabled = request.form.get("sms_enabled") == "yes"
 
     con = get_db()
@@ -322,8 +285,7 @@ def sms_settings():
     cur.close()
     con.close()
 
-    flash("SMS preferences updated.")
-
+    flash(f"SMS notifications {'enabled' if enabled else 'disabled'}.")
     return redirect(url_for("dashboard"))
 
 
@@ -331,13 +293,11 @@ def sms_settings():
 
 @app.route("/sos", methods=["POST"])
 @login_required
-@limiter.limit("3 per minute")
+@limiter.limit("20 per minute")
 def sos():
-
     data = request.get_json(silent=True) or {}
 
     try:
-
         lat = float(data.get("latitude"))
         lon = float(data.get("longitude"))
 
@@ -345,7 +305,6 @@ def sos():
             raise ValueError()
 
     except (TypeError, ValueError):
-
         return jsonify({
             "success": False,
             "message": "Valid GPS coordinates are required."
@@ -357,7 +316,6 @@ def sos():
     cur = con.cursor()
 
     try:
-
         cur.execute("""
             INSERT INTO sos_alerts
             (user_id, latitude, longitude)
@@ -377,7 +335,6 @@ def sos():
             SELECT name, sms_enabled
             FROM users WHERE user_id = %s
         """, (user_id,))
-
         user = cur.fetchone()
 
         cur.execute("""
@@ -385,66 +342,75 @@ def sos():
             FROM emergency_contacts
             WHERE user_id = %s
         """, (user_id,))
-
         contacts = cur.fetchall()
 
         con.commit()
 
-    except Exception:
-
+    except Exception as exc:
         con.rollback()
         cur.close()
         con.close()
-        raise
+        return jsonify({
+            "success": False,
+            "message": f"Failed to record SOS alert: {str(exc)}"
+        }), 500
 
     sms_results = []
 
-    if user[1]:
-
+    if user and user[1]:
         message = (
             f"EMERGENCY ALERT from {user[0]}. "
-            f"They may need assistance. "
+            f"They may need immediate assistance. "
             f"Last reported location: "
-            f"https://www.openstreetmap.org/"
-            f"?mlat={lat}&mlon={lon}"
+            f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}"
         )
 
         for contact in contacts:
-
             result = send_emergency_sms(
                 contact[2],
                 message
             )
-
             sms_results.append(result["success"])
 
-            cur.execute("""
-                INSERT INTO sms_logs
-                (user_id, contact_id, alert_id,
-                 phone, message_sid, status, error_message)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                user_id,
-                contact[0],
-                alert_id,
-                contact[2],
-                result["sid"],
-                "SUBMITTED" if result["success"] else "FAILED",
-                result["error"]
-            ))
+            try:
+                cur.execute("""
+                    INSERT INTO sms_logs
+                    (user_id, contact_id, alert_id,
+                     phone, message_sid, status, error_message)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    user_id,
+                    contact[0],
+                    alert_id,
+                    contact[2],
+                    result["sid"],
+                    "SUBMITTED" if result["success"] else "FAILED",
+                    result["error"]
+                ))
+            except Exception:
+                pass
 
-        con.commit()
+        try:
+            con.commit()
+        except Exception:
+            pass
 
     cur.close()
     con.close()
 
+    total_contacts = len(contacts) if contacts else 0
+    submitted = sum(sms_results) if sms_results else 0
+    failed = total_contacts - submitted if sms_results else 0
+
     return jsonify({
         "success": True,
         "alert_id": alert_id,
-        "sms_enabled": bool(user[1]),
-        "sms_submitted": sum(sms_results),
-        "sms_failed": len(sms_results) - sum(sms_results),
-        "message": "SOS alert saved."
+        "sms_enabled": bool(user[1]) if user else False,
+        "contacts_count": total_contacts,
+        "sms_submitted": submitted,
+        "sms_failed": failed,
+        "coordinates": {"latitude": lat, "longitude": lon},
+        "message": f"EMERGENCY SOS BROADCASTED! Alert #{alert_id} logged."
     })
 
 
@@ -453,13 +419,10 @@ def sos():
 @app.route("/tracking-settings", methods=["POST"])
 @login_required
 def tracking_settings():
-
     data = request.get_json(silent=True) or {}
-
     enabled = data.get("enabled")
 
     if not isinstance(enabled, bool):
-
         return jsonify({
             "success": False,
             "message": "Invalid tracking setting."
@@ -475,7 +438,6 @@ def tracking_settings():
     """, (enabled, current_user_id()))
 
     con.commit()
-
     cur.close()
     con.close()
 
@@ -489,13 +451,11 @@ def tracking_settings():
 
 @app.route("/update-location", methods=["POST"])
 @login_required
-@limiter.limit("30 per minute")
+@limiter.limit("60 per minute")
 def update_location():
-
     data = request.get_json(silent=True) or {}
 
     try:
-
         lat = float(data.get("latitude"))
         lon = float(data.get("longitude"))
 
@@ -503,7 +463,6 @@ def update_location():
             raise ValueError()
 
     except (TypeError, ValueError):
-
         return jsonify({
             "success": False,
             "message": "Invalid GPS coordinates."
@@ -521,13 +480,11 @@ def update_location():
     user = cur.fetchone()
 
     if not user or not user[0]:
-
         cur.close()
         con.close()
-
         return jsonify({
             "success": False,
-            "message": "Tracking is disabled."
+            "message": "Tracking is currently disabled in your settings."
         }), 403
 
     cur.execute("""
@@ -537,13 +494,12 @@ def update_location():
     """, (current_user_id(), lat, lon))
 
     con.commit()
-
     cur.close()
     con.close()
 
     return jsonify({
         "success": True,
-        "message": "Location updated."
+        "message": "Live location updated successfully."
     })
 
 
@@ -552,11 +508,17 @@ def update_location():
 @app.route("/risk", methods=["POST"])
 @login_required
 def risk():
-
-    followed = request.form.get("followed") == "yes"
-    isolated = request.form.get("isolated") == "yes"
-    threat = request.form.get("threat") == "yes"
-    unsafe = request.form.get("unsafe") == "yes"
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        followed = data.get("followed") in [True, "yes", "true", 1, "1"]
+        isolated = data.get("isolated") in [True, "yes", "true", 1, "1"]
+        threat = data.get("threat") in [True, "yes", "true", 1, "1"]
+        unsafe = data.get("unsafe") in [True, "yes", "true", 1, "1"]
+    else:
+        followed = request.form.get("followed") == "yes"
+        isolated = request.form.get("isolated") == "yes"
+        threat = request.form.get("threat") == "yes"
+        unsafe = request.form.get("unsafe") == "yes"
 
     level, score = predict_risk(
         followed,
@@ -575,28 +537,33 @@ def risk():
     """, (current_user_id(), level, score))
 
     con.commit()
-
     cur.close()
     con.close()
 
-    flash(f"Risk assessment completed: {level}")
+    if request.is_json:
+        return jsonify({
+            "success": True,
+            "risk_level": level,
+            "risk_score": score
+        })
 
+    flash(f"Risk Assessment: {level} Risk (Confidence Score: {score}%)")
     return redirect(url_for("dashboard"))
 
 
 # ---------------- LOGOUT ----------------
 
-@app.route("/logout", methods=["POST"])
+@app.route("/logout", methods=["GET", "POST"])
 @login_required
 def logout():
-
     session.clear()
-
+    flash("You have been successfully logged out.")
     return redirect(url_for("login"))
 
 
 if __name__ == "__main__":
-
     create_tables()
-
-    app.run(debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")
+    app.run(
+        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
+        port=int(os.getenv("PORT", "5000"))
+    )
